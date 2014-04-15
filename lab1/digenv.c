@@ -12,7 +12,7 @@ It fetches all environment variables, sorts them
 alphabetically and then prints them using a pager. 
 Optionally, standard grep parameters can be used 
 to only show specific variables, e.g.
-> digenv HOME
+> ./digenv HOME
 to show variables that contain the string HOME
 */
 
@@ -110,19 +110,32 @@ int main(int argc, char **argv, char **envp)
 
 			/* This code is only reached if there is an error in execvp */
 			perror("Exec failed");
-			exit(-1);
+			exit(1);
 
 		} 
 		
 	}
 
-	/* Parent does not use the pipe, so close all */
+	/* Parent does not use the pipes, so close all */
 	close_pipes();
 	
 	/* Wait for children to finish */
 	int j;
-	for(j=0; j<num_proc; j++)
-		wait(0);
+	for(j=0; j<num_proc; j++) {
+		int status;
+		if (wait(&status) == -1) {
+			exit_with_error();
+		}
+		if (WIFEXITED(status)) { 
+			int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
+			if (child_status != 0) { /* Something went wrong in child process */
+				fprintf(stderr, "Child process (%s) failed with exit code %d\n", processes[j]->command[0], child_status);
+			}
+		} else if (WIFSIGNALED(status)) {
+			int child_status = WTERMSIG(status); /* Child process ended by signal */
+			fprintf(stderr, "Child process (%s) terminated by signal %d\n", processes[j]->command[0], child_status);
+		}
+	}
 
 	return 0;
 }
@@ -131,12 +144,10 @@ int main(int argc, char **argv, char **envp)
 void close_pipes() {
 	int i;
 	for (i=0; i<num_proc; i++) {
-		return_value = close(processes[i]->pipe_fd[READ]); /* Close read pipe */
-		if (return_value == -1) {
+		if (close(processes[i]->pipe_fd[READ]) == -1) { /* Close read pipe */
 			exit_with_error();
 		}
-		return_value = close(processes[i]->pipe_fd[WRITE]); /* Close write pipe */
-		if (return_value == -1) {
+		if (close(processes[i]->pipe_fd[WRITE]) == -1) { /* Close write pipe */
 			exit_with_error();
 		}
 	}
@@ -145,5 +156,5 @@ void close_pipes() {
 /* Prints the last occurring error and exits the program with an error code */
 void exit_with_error() {
 	perror("Error");
-	exit(-1);
+	exit(1);
 }
