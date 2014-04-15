@@ -49,19 +49,21 @@ int main(int argc, char **argv, char **envp)
 		if (return_value == -1) {
 			exit_with_error();
 		}
+	}
+	for (i=0; i < num_proc; i++) {
 
 		child_pid = fork();
 
-		if (child_pid == 0) { //Pager child
+		if (child_pid == 0) { 
 			if (i != 0) {
-				return_value = dup2(processes[i-1]->pipe_fd[READ], 0 ); //STDIN_FILENO == 0
-				if (return_value == -1) {
+				return_value = dup2(processes[i-1]->pipe_fd[READ], STDIN_FILENO ); //STDIN_FILENO == 0
+				if (return_value < 0) {
 					exit_with_error();
 				}
 			}
 			if (i != num_proc-1) {
-				return_value = dup2(processes[i]->pipe_fd[WRITE], 1 ); //STDOUT_FILENO == 1
-				if (return_value == -1) {
+				return_value = dup2(processes[i]->pipe_fd[WRITE], STDOUT_FILENO ); //STDOUT_FILENO == 1
+				if (return_value < 0) {
 					exit_with_error();
 				}
 			}
@@ -84,9 +86,10 @@ int main(int argc, char **argv, char **envp)
 				exit_with_error();
 			}
 
-			close_pipes();
 		}
 	}
+
+	close_pipes();
 	
 	int j;
 	for(j=0; j<num_proc; j++)
