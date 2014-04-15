@@ -6,29 +6,39 @@
 #include <sys/wait.h> /* definierar bland annat WIFEXITED */
 #include <string.h> /* for strcmp */
 
-#define READ 0
-#define WRITE 1
+/*
+This program is an improved version of printenv.
+It fetches all environment variables, sorts them
+alphabetically and then prints them using a pager. 
+Optionally, standard grep parameters can be used 
+to only show specific variables, e.g.
+> digenv HOME
+to show variables that contain the string HOME
+*/
+
+#define READ 0 /* Index of read end of pipes */
+#define WRITE 1 /* Index of write end of pipes */
 
 void exit_with_error();
 void close_pipes();
 
+/* Struct for holding data for processes */
 typedef struct Process {
-	int pipe_fd[2];
-	int useargv;
-	char *command[];
+	int pipe_fd[2]; /* The pipe between this and the next process */
+	int useargv; /* If the process should use the program arguments or not */
+	char *command[]; /* The name of the command, as an array */
 } Process;
 
-Process *processes[4];
+Process *processes[4]; /* array for holding the process data */
 
 Process printenv = {{0,0}, 0, {"printenv", NULL}};
 Process grep = {{0,0}, 1, {"grep", NULL}};
 Process sort = {{0,0}, 0, {"sort", NULL}};
 Process less = {{0,0}, 0, {"less", NULL}};
 
-int pipe_filedesc[2]; //Pipe for communication
-pid_t child_pid;
-int return_value;
-int num_proc = 3;
+pid_t child_pid; /* Id for child processes */
+int return_value; /* Placeholder for return values */
+int num_proc = 3; /* How many processes to run (printenv, [grep], sort, less) */
 
 int main(int argc, char **argv, char **envp)
 {
