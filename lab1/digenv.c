@@ -10,11 +10,28 @@
 
 void exit_with_error();
 
+typedef struct Process {
+	int pipe_fd[2];
+	char *name;
+} Process;
+
 int main(int argc, char **argv, char **envp)
 {
 	int pipe_filedesc[2]; //Pipe for communication
 	pid_t child_pid;
 	int return_value;
+	int num_proc = 3;
+
+	if (argc > 1) {
+		num_proc = 4;
+	}
+	Process processes[num_proc];
+
+	int i;
+	for (i = 0; i < num_proc; i++) {
+		return_value = pipe(processes[i].pipe_fd)
+	}
+
 
 	return_value = pipe( pipe_filedesc );
 	if (return_value == -1) {
@@ -48,15 +65,13 @@ int main(int argc, char **argv, char **envp)
 		if (child_pid == -1) {
 			exit_with_error();
 		}
-
-		return_value = close(pipe_filedesc[READ]);//Close read pipe
+		return_value = dup2( pipe_filedesc[ WRITE ], 1 );
 		if (return_value == -1) {
 			exit_with_error();
 		}
-		char* value = "hello";
-		int bytes = write( pipe_filedesc[WRITE], value, sizeof("hello") - 1 );
-		if (bytes == -1) {
-			exit_with_error();;
+		return_value = close(pipe_filedesc[READ]);//Close read pipe
+		if (return_value == -1) {
+			exit_with_error();
 		}
 		return_value = close(pipe_filedesc[WRITE]);//Close read pipe
 		if (return_value == -1) {
