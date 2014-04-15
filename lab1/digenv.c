@@ -8,6 +8,8 @@
 #define READ 0
 #define WRITE 1
 
+void exit_with_error();
+
 int main(int argc, char **argv, char **envp)
 {
 	int pipe_filedesc[2]; //Pipe for communication
@@ -16,8 +18,7 @@ int main(int argc, char **argv, char **envp)
 
 	return_value = pipe( pipe_filedesc );
 	if (return_value == -1) {
-		printf("pipe failure\n");
-		exit(-1);
+		exit_with_error();
 	}
 
 	child_pid = fork();
@@ -25,18 +26,15 @@ int main(int argc, char **argv, char **envp)
 	if (child_pid == 0) { //Pager child
 		return_value = dup2( pipe_filedesc[ READ ], 0 ); /* STDIN_FILENO == 0 */
 		if (return_value == -1) {
-			printf("Failed duplicating pipe\n");
-			exit(-1);
+			exit_with_error();
 		}
 		return_value = close(pipe_filedesc[WRITE]);//Close write pipe
 		if (return_value == -1) {
-			printf("Failed closing pipe\n");
-			exit(-1);
+			exit_with_error();
 		}
 		return_value = close(pipe_filedesc[READ]);//Close read pipe
 		if (return_value == -1) {
-			printf("Failed closing pipe\n");
-			exit(-1);
+			exit_with_error();
 		}
 
 		char* const argv[2] = {"less", 0};
@@ -48,28 +46,29 @@ int main(int argc, char **argv, char **envp)
 
 	} else { //Parent
 		if (child_pid == -1) {
-			printf("Fork failed\n");
-			exit(-1);
+			exit_with_error();
 		}
 
 		return_value = close(pipe_filedesc[READ]);//Close read pipe
 		if (return_value == -1) {
-			printf("Failed closing pipe\n");
-			exit(-1);
+			exit_with_error();
 		}
 		char* value = "hello";
 		int bytes = write( pipe_filedesc[WRITE], value, sizeof("hello") - 1 );
 		if (bytes == -1) {
-			printf("Failed writing\n");
-			exit(-1);
+			exit_with_error();;
 		}
 		return_value = close(pipe_filedesc[WRITE]);//Close read pipe
 		if (return_value == -1) {
-			printf("Failed closing pipe\n");
-			exit(-1);
+			exit_with_error();
 		}
 		wait(0);
 	}
 
 	return 0;
+}
+
+void exit_with_error() {
+	perror("Error");
+	exit(-1);
 }
