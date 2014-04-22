@@ -12,10 +12,11 @@ typedef int bool;
 #define true 1
 #define false 0
 
+void print_command_prompt(); /* Prints current directory and prompt sign */
 void read_command(); /* Read input from stdin */
 void parse_command(); /* Parse input string into array */
 
-char command_prompt[100]; /* The command string that the user inputs */
+char command[100]; /* The command string that the user inputs */
 bool background = false; /* Whether the current command should be run in background or not */
 char* args[10]; /* The command arguments as an array */
 int argc = 0; /* The number of arguments to the command */
@@ -24,8 +25,11 @@ pid_t child_pid;
 int main(int argc, char **argv, char **envp)
 {
 	while ( true ) {
+		print_command_prompt();
 		read_command( );
 		parse_command( );
+		if ( argc == 0 )
+			continue;
 
 		if ( strcmp(args[0], "exit") == 0 ) { /* if command is exit, exit */
 			exit(0);
@@ -72,25 +76,33 @@ int main(int argc, char **argv, char **envp)
 	}
 }
 
+void print_command_prompt() {
+	char current_dir[1024];
+   	getcwd( current_dir, sizeof(current_dir) );
+	printf( "minishell:%s$ ", current_dir );
+}
+
 void read_command() {
-	char *buf = command_prompt;
-	size_t size = sizeof( command_prompt );
+	char *buf = command;
+	size_t size = sizeof( command );
 	getline( &buf, &size, stdin );
 }
 
 void parse_command() {
 	char * delimiter = " \n"; //Split command string on space and newline
-	char *token = strtok( command_prompt, delimiter );
+	char *token = strtok( command, delimiter );
 	int i = 0;
-    while( token != NULL )
-    {
-    	args[i++] = token;
-        token = strtok( NULL, delimiter );
-    }
-    argc = i;
+	/* TODO Find the code that causes segmentation fault */
+	while ( token != NULL ) {
+		args[i++] = token;
+		token = strtok( NULL, delimiter );
+	}
+
+	argc = i;
 	background = false;
-    if ( strcmp( args[i-1], "&" ) == 0 ) {
-    	argc = i - 1;
-    	background = true;
-    }
+	if ( strcmp( args[i-1], "&" ) == 0 ) {
+		argc = i - 1;
+		background = true;
+	}
+		
 }
