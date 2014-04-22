@@ -12,6 +12,7 @@ typedef int bool;
 #define true 1
 #define false 0
 
+void clear_last_command();
 void print_command_prompt(); /* Prints current directory and prompt sign */
 void read_command(); /* Read input from stdin */
 void parse_command(); /* Parse input string into array */
@@ -25,6 +26,7 @@ pid_t child_pid;
 int main(int argc, char **argv, char **envp)
 {
 	while ( true ) {
+		clear_last_command();
 		print_command_prompt();
 		read_command( );
 		parse_command( );
@@ -35,7 +37,13 @@ int main(int argc, char **argv, char **envp)
 			exit(0);
 
 		} else if ( strcmp(args[0], "cd") == 0 ) {
-			/* TODO perform cd */
+			int return_value = chdir( args[1] ); /* Change directory */
+			if (return_value == -1) { /* Error changing directory */
+				char *home = getenv( "HOME" );
+				if (home == NULL)
+					home = "/";
+				chdir( home );
+			}
 			
 		} else {
 			/* execute system command in child process */
@@ -76,6 +84,14 @@ int main(int argc, char **argv, char **envp)
 	}
 }
 
+void clear_last_command() {
+	int i;
+	for (i = 0; i < sizeof(command); i++)
+		command[i] = '\0';
+	for (i = 0; i < sizeof(args); i++)
+		args[i] = '\0';
+}
+
 void print_command_prompt() {
 	char current_dir[1024];
    	getcwd( current_dir, sizeof(current_dir) );
@@ -89,7 +105,7 @@ void read_command() {
 }
 
 void parse_command() {
-	char * delimiter = " \n"; //Split command string on space and newline
+	char * delimiter = " \n"; /* Split command string on space and newline */
 	char *token = strtok( command, delimiter );
 	int i = 0;
 	/* TODO Find the code that causes segmentation fault */
