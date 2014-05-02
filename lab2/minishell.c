@@ -17,12 +17,14 @@ void clear_last_command();
 void print_command_prompt(); /* Prints current directory and prompt sign */
 void read_command(); /* Read input from stdin */
 void parse_command(); /* Parse input string into array */
+void print_finished_message(); /* Prints a message saying that the last foreground process has finished */
 
 char command[100]; /* The command string that the user inputs */
 bool background = false; /* Whether the current command should be run in background or not */
 char* args[10]; /* The command arguments as an array */
 int argc = 0; /* The number of arguments to the command */
-pid_t child_pid;
+pid_t child_pid; /* The process id of the last spawned process */
+struct timeval start, end; /* Start and end time of process */
 
 int main(int argcount, char **argv, char **envp)
 {
@@ -34,8 +36,8 @@ int main(int argcount, char **argv, char **envp)
 		if ( argc == 0 )
 			continue;
 
-		struct timeval start;
 		gettimeofday(&start, NULL);
+
 		if ( strcmp(args[0], "exit") == 0 ) { /* if command is exit, exit */
 			exit(0);
 
@@ -86,13 +88,8 @@ int main(int argcount, char **argv, char **envp)
 
 		}
 
-		struct timeval end;
-		gettimeofday(&end, NULL);
-		long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
-		runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
-		if ( !background ) {
-			printf("Done: process %d (%s) ran for %ldms\n", child_pid, args[0], runtime);
-		}
+		print_finished_message();
+
 		/* TODO check if background processes have finished */
 	}
 }
@@ -133,4 +130,13 @@ void parse_command() {
 		background = true;
 	}
 		
+}
+
+void print_finished_message() {
+	gettimeofday(&end, NULL);
+	long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
+	runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
+	if ( !background ) {
+		printf("Done: process %d (%s) ran for %ldms\n", child_pid, args[0], runtime);
+	}
 }
