@@ -6,6 +6,7 @@
 #include <ctype.h> /* isspace */
 #include <sys/wait.h> /* definierar bland annat WIFEXITED */
 #include <unistd.h> /* definierar bland annat pipe() */
+#include <time.h> /* Time measurement */
 
 /* Define booleans */
 typedef int bool;
@@ -33,6 +34,8 @@ int main(int argcount, char **argv, char **envp)
 		if ( argc == 0 )
 			continue;
 
+		struct timeval start;
+		gettimeofday(&start, NULL);
 		if ( strcmp(args[0], "exit") == 0 ) { /* if command is exit, exit */
 			exit(0);
 
@@ -63,6 +66,9 @@ int main(int argcount, char **argv, char **envp)
 
 			} 
 
+			char *fgbg = (background) ? "background" : "foreground";
+			printf("Spawned %s process %d (%s)\n", fgbg, child_pid, args[0]);
+
 			/* TODO Wait for process if it is not background */
 			int status;
 			if (waitpid(child_pid, &status, 0) == -1) {
@@ -79,7 +85,14 @@ int main(int argcount, char **argv, char **envp)
 			}
 
 		}
-		/* TODO print info about finished command */
+
+		struct timeval end;
+		gettimeofday(&end, NULL);
+		long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
+		runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
+		if ( !background ) {
+			printf("Done: process %d (%s) ran for %ldms\n", child_pid, args[0], runtime);
+		}
 		/* TODO check if background processes have finished */
 	}
 }
