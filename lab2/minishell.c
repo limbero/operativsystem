@@ -23,13 +23,13 @@ char* args[10]; /* The command arguments as an array */
 int argc = 0; /* The number of arguments to the command */
 pid_t child_pid;
 
-int main(int argc, char **argv, char **envp)
+int main(int argcount, char **argv, char **envp)
 {
 	while ( true ) {
 		clear_last_command();
 		print_command_prompt();
-		read_command( );
-		parse_command( );
+		read_command();
+		parse_command();
 		if ( argc == 0 )
 			continue;
 
@@ -108,7 +108,6 @@ void parse_command() {
 	char * delimiter = " \n"; /* Split command string on space and newline */
 	char *token = strtok( command, delimiter );
 	int i = 0;
-	/* TODO Find the code that causes segmentation fault */
 	while ( token != NULL ) {
 		args[i++] = token;
 		token = strtok( NULL, delimiter );
@@ -116,7 +115,7 @@ void parse_command() {
 
 	argc = i;
 	background = false;
-	if ( strcmp( args[i-1], "&" ) == 0 ) {
+	if ( argc > 0 && strcmp( args[i-1], "&" ) == 0 ) {
 		argc = i - 1;
 		background = true;
 	}
