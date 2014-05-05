@@ -84,7 +84,7 @@ int main(int argcount, char **argv, char **envp)
 
 				int status;
 				if (waitpid(child_pid, &status, 0) == -1) {
-					exit(1); /* TODO print error message and continue? */
+					/* Don't do shit, I think. */
 				}
 				if (WIFEXITED(status)) { 
 					int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
@@ -107,7 +107,6 @@ int main(int argcount, char **argv, char **envp)
 }
 
 void catch_function(int signo) {
-    /*printf("\nCaught %d", signo);*/
     signal(signo, catch_function);
 }
 
@@ -128,8 +127,7 @@ void print_command_prompt() {
 void read_command() {
 	char *buf = command;
 	size_t size = sizeof( command );
-	/*getline( &buf, &size, stdin );*/
-	fgets( buf, size, stdin );
+	while(fgets( buf, size, stdin ) == NULL && errno == EINTR );
 }
 
 void parse_command() {
