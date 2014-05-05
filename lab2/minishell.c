@@ -68,10 +68,11 @@ int main(int argcount, char **argv, char **envp)
 
 			} 
 
+			/* Print spawned message */
 			char *fgbg = (background) ? "background" : "foreground";
 			printf("Spawned %s process %d (%s)\n", fgbg, child_pid, args[0]);
 
-			/* TODO Wait for process if it is not background */
+			/* Wait for process if it is not background */
 			int status;
 			if (waitpid(child_pid, &status, 0) == -1) {
 				exit(1); /* TODO print error message and continue? */
@@ -133,10 +134,10 @@ void parse_command() {
 }
 
 void print_finished_message() {
-	gettimeofday(&end, NULL);
-	long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
-	runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
 	if ( !background ) {
+		gettimeofday(&end, NULL);
+		long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
+		runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
 		printf("Done: process %d (%s) ran for %ldms\n", child_pid, args[0], runtime);
 	}
 }
