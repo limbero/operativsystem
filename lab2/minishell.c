@@ -6,7 +6,7 @@
 #include <ctype.h> /* isspace */
 #include <sys/wait.h> /* definierar bland annat WIFEXITED */
 #include <unistd.h> /* definierar bland annat pipe() */
-#include <time.h> /* Time measurement */
+#include <sys/time.h> /* Time measurement */
 
 /* Define booleans */
 typedef int bool;
@@ -18,6 +18,7 @@ void print_command_prompt(); /* Prints current directory and prompt sign */
 void read_command(); /* Read input from stdin */
 void parse_command(); /* Parse input string into array */
 void print_finished_message(); /* Prints a message saying that the last foreground process has finished */
+void check_bg_processes(); /* Checks if any of the background processes have finished */
 
 char command[100]; /* The command string that the user inputs */
 bool background = false; /* Whether the current command should be run in background or not */
@@ -73,25 +74,29 @@ int main(int argcount, char **argv, char **envp)
 			printf("Spawned %s process %d (%s)\n", fgbg, child_pid, args[0]);
 
 			/* Wait for process if it is not background */
-			int status;
-			if (waitpid(child_pid, &status, 0) == -1) {
-				exit(1); /* TODO print error message and continue? */
-			}
-			if (WIFEXITED(status)) { 
-				int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
-				if (child_status != 0) { /* Something went wrong in child process */
-					fprintf(stderr, "Child process (%s) failed with exit code %d\n", args[0], child_status);
-				}
-			} else if (WIFSIGNALED(status)) {
-				int child_status = WTERMSIG(status); /* Child process ended by signal */
-				fprintf(stderr, "Child process (%s) terminated by signal %d\n", args[0], child_status);
-			}
+			if ( !background ) {
 
+				int status;
+				if (waitpid(child_pid, &status, 0) == -1) {
+					exit(1); /* TODO print error message and continue? */
+				}
+				if (WIFEXITED(status)) { 
+					int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
+					if (child_status != 0) { /* Something went wrong in child process */
+						fprintf(stderr, "Child process (%s) failed with exit code %d\n", args[0], child_status);
+					}
+				} else if (WIFSIGNALED(status)) {
+					int child_status = WTERMSIG(status); /* Child process ended by signal */
+					fprintf(stderr, "Child process (%s) terminated by signal %d\n", args[0], child_status);
+				}
+
+			}
 		}
 
 		print_finished_message();
 
-		/* TODO check if background processes have finished */
+		check_bg_processes();
+
 	}
 }
 
@@ -128,6 +133,7 @@ void parse_command() {
 	background = false;
 	if ( argc > 0 && strcmp( args[i-1], "&" ) == 0 ) {
 		argc = i - 1;
+		args[i-1] = '\0';
 		background = true;
 	}
 		
@@ -138,6 +144,18 @@ void print_finished_message() {
 		gettimeofday(&end, NULL);
 		long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
 		runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
-		printf("Done: process %d (%s) ran for %ldms\n", child_pid, args[0], runtime);
+		printf("Done: foreground process %d (%s) has finished and ran for %ldms\n", child_pid, args[0], runtime);
+	}
+}
+
+void check_bg_processes() {
+	int status;
+	pid_t pid;
+	while ( true ) {
+		pid = waitpid(-1, &status, WNOHANG);
+		if (pid == 0 || pid == -1)
+			break;
+
+		printf("Done: background process %d has finished\n", pid);
 	}
 }
