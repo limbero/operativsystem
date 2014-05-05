@@ -30,7 +30,7 @@ struct timeval start, end; /* Start and end time of process */
 
 int main(int argcount, char **argv, char **envp)
 {
-	if (signal(SIGINT, SIG_IGN) == SIG_ERR)
+	if (signal(SIGINT, catch_function) == SIG_ERR)
  	 	printf("Couldn't catch SIGINT\n");
 
 	while ( true ) {
@@ -108,6 +108,7 @@ int main(int argcount, char **argv, char **envp)
 
 void catch_function(int signo) {
     /*printf("\nCaught %d", signo);*/
+    signal(signo, catch_function);
 }
 
 void clear_last_command() {
