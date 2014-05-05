@@ -13,6 +13,7 @@ typedef int bool;
 #define true 1
 #define false 0
 
+void catch_function(int signo); /* Catch signals */
 void clear_last_command();
 void print_command_prompt(); /* Prints current directory and prompt sign */
 void read_command(); /* Read input from stdin */
@@ -29,6 +30,9 @@ struct timeval start, end; /* Start and end time of process */
 
 int main(int argcount, char **argv, char **envp)
 {
+	if (signal(SIGINT, SIG_IGN) == SIG_ERR)
+ 	 	printf("Couldn't catch SIGINT\n");
+
 	while ( true ) {
 		clear_last_command();
 		print_command_prompt();
@@ -38,6 +42,8 @@ int main(int argcount, char **argv, char **envp)
 			continue;
 
 		gettimeofday(&start, NULL);
+
+
 
 		if ( strcmp(args[0], "exit") == 0 ) { /* if command is exit, exit */
 			exit(0);
@@ -84,6 +90,8 @@ int main(int argcount, char **argv, char **envp)
 					int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
 					if (child_status != 0) { /* Something went wrong in child process */
 						fprintf(stderr, "Child process (%s) failed with exit code %d\n", args[0], child_status);
+					} else {
+						print_finished_message();
 					}
 				} else if (WIFSIGNALED(status)) {
 					int child_status = WTERMSIG(status); /* Child process ended by signal */
@@ -93,11 +101,13 @@ int main(int argcount, char **argv, char **envp)
 			}
 		}
 
-		print_finished_message();
-
 		check_bg_processes();
 
 	}
+}
+
+void catch_function(int signo) {
+    /*printf("\nCaught %d", signo);*/
 }
 
 void clear_last_command() {
@@ -117,7 +127,8 @@ void print_command_prompt() {
 void read_command() {
 	char *buf = command;
 	size_t size = sizeof( command );
-	getline( &buf, &size, stdin );
+	/*getline( &buf, &size, stdin );*/
+	fgets( buf, size, stdin );
 }
 
 void parse_command() {
