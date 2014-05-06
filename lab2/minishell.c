@@ -1,3 +1,6 @@
+#define _XOPEN_SOURCE 500 /* for sigset, aningens oklar */
+
+#include <signal.h> /* for sigset */
 #include <sys/types.h> /* definierar typen pid_t */
 #include <errno.h> /* definierar bland annat perror() */
 #include <stdio.h> /* definierar bland annat stderr */
@@ -6,33 +9,34 @@
 #include <ctype.h> /* isspace */
 #include <sys/wait.h> /* definierar bland annat WIFEXITED */
 #include <unistd.h> /* definierar bland annat pipe() */
-#include <sys/time.h> /* Time measurement */
+#include <sys/time.h> /* tidtagning */
 
-/* Define booleans */
+/* definiera booleans */
 typedef int bool;
 #define true 1
 #define false 0
 
-void catch_function(int signo); /* Catch signals */
-void clear_last_command();
-void print_command_prompt(); /* Prints current directory and prompt sign */
-void read_command(); /* Read input from stdin */
-void parse_command(); /* Parse input string into array */
-void print_finished_message(); /* Prints a message saying that the last foreground process has finished */
-void check_bg_processes(); /* Checks if any of the background processes have finished */
+void catch_function(int signo); /* vi vill inte gora nagonting, bara fanga signalen */
+void clear_last_command(); /* tom det forra kommandot och dess argument */
+void print_command_prompt(); /* skriv ut var prompt, innehallandes working directory */
+void read_command(); /* las in nasta kommando fran stdin */
+void parse_command(); /* gor om kommandot fran en ren strang till en array med kommando och argument */
+void print_finished_message(); /* skriv ut kortid och vilken process det galler */
+void check_bg_processes(); /* leta efter avslutade bakgrundsprocesser */
 
-char command[100]; /* The command string that the user inputs */
-bool background = false; /* Whether the current command should be run in background or not */
-char* args[10]; /* The command arguments as an array */
-int argc = 0; /* The number of arguments to the command */
-pid_t child_pid; /* The process id of the last spawned process */
-struct timeval start, end; /* Start and end time of process */
+char command[100]; /* kommandot */
+bool background = false; /* ar det en bakgrundsprocess eller ej, svara mig det */
+char* args[10]; /* kommandots argument som array */
+int argc = 0; /* antalet argument kommandot har */
+pid_t child_pid; /* processid for senast skapade processen */
+struct timeval start, end; /* start- och end-tid for processer */
 
 int main(int argcount, char **argv, char **envp)
 {
-	if (signal(SIGINT, catch_function) == SIG_ERR)
+	if (sigset(SIGINT, catch_function) == SIG_ERR)
  	 	printf("Couldn't catch SIGINT\n");
 
+ 	/* Loopa forever */
 	while ( true ) {
 		clear_last_command();
 		print_command_prompt();
@@ -41,73 +45,74 @@ int main(int argcount, char **argv, char **envp)
 		if ( argc == 0 )
 			continue;
 
-		gettimeofday(&start, NULL);
+		gettimeofday(&start, NULL); /* spara starttiden sa att vi kan mata exekveringstiden */
 
 
 
-		if ( strcmp(args[0], "exit") == 0 ) { /* if command is exit, exit */
+		if ( strcmp(args[0], "exit") == 0 ) { /* om kommandot ar exit, exita */
 			exit(0);
 
-		} else if ( strcmp(args[0], "cd") == 0 ) {
-			int return_value = chdir( args[1] ); /* Change directory */
-			if (return_value == -1) { /* Error changing directory */
+		} else if ( strcmp(args[0], "cd") == 0 ) { /* anvand var implementation av cd */
+			int return_value = chdir( args[1] ); /* byt working directory */
+			if (return_value == -1) { /* att byta directory misslyckades */
 				char *home = getenv( "HOME" );
 				if (home == NULL)
 					home = "/";
-				chdir( home );
+				chdir( home ); /* ga hem istallet */
 			}
 			
 		} else {
-			/* execute system command in child process */
+			/* skapa ny barnprocess for systemkommandot */
 			child_pid = fork();
 
-			if (child_pid == -1) { /* Parent process, fork failed */
-				exit(1); /* TODO print error message and continue? */
+			if (child_pid == -1) { /* foraldraprocessen, fork failade */
+				exit(1); /* kill it with fire */
 
-			} else if (child_pid == 0) { /* Child process */
+			} else if (child_pid == 0) { /* barnprocess */
 
-				/* Execute the command */
+				/* exekvera kommandot */
 				execvp(args[0], args);
 
-				/* This code is only reached if there is an error in execvp */
+				/* hit kommer man bara om execvp failar */
 				perror("Exec failed");
-				exit(1); /* Should we kill the shell here, or just print an error and go on with our lives? */
+				exit(1); /* om exekveringen failar, doda denna kopia av shellet */
 
 			} 
 
-			/* Print spawned message */
+			/* skriv ut vilken process som skapats */
 			char *fgbg = (background) ? "background" : "foreground";
 			printf("Spawned %s process %d (%s)\n", fgbg, child_pid, args[0]);
 
-			/* Wait for process if it is not background */
+			/* vanta pa forgrundsprocesser */
 			if ( !background ) {
 
 				int status;
 				if (waitpid(child_pid, &status, 0) == -1) {
-					/* Don't do shit, I think. */
+					/* gor inget om den inte finns */
 				}
-				if (WIFEXITED(status)) { 
+				if (WIFEXITED(status)) { /* barnprocessen avslutades */
 					int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
-					if (child_status != 0) { /* Something went wrong in child process */
+					if (child_status != 0) { /* barnprocessen har avslutat med felmeddelande */
 						fprintf(stderr, "Child process (%s) failed with exit code %d\n", args[0], child_status);
 					} else {
 						print_finished_message();
 					}
-				} else if (WIFSIGNALED(status)) {
-					int child_status = WTERMSIG(status); /* Child process ended by signal */
+				} else if (WIFSIGNALED(status)) { /* barnprocessen har avslutats av en signal */
+					int child_status = WTERMSIG(status);
 					fprintf(stderr, "Child process (%s) terminated by signal %d\n", args[0], child_status);
 				}
 
 			}
 		}
 
+		/* kolla om nagon bakgrundsprocess avslutats sedan senaste kommandot */
 		check_bg_processes();
 
 	}
 }
 
 void catch_function(int signo) {
-    signal(signo, catch_function);
+	/* gor ingenting */
 }
 
 void clear_last_command() {
@@ -127,23 +132,25 @@ void print_command_prompt() {
 void read_command() {
 	char *buf = command;
 	size_t size = sizeof( command );
-	while(fgets( buf, size, stdin ) == NULL && errno == EINTR );
+	while(fgets( buf, size, stdin ) == NULL && errno == EINTR ); /* las nasta rad tills fgets inte returnerar NULL och far interrupt error */
 }
 
 void parse_command() {
-	char * delimiter = " \n"; /* Split command string on space and newline */
+	char * delimiter = " \n"; /* dela upp kommandostrangen pa space och newline */
 	char *token = strtok( command, delimiter );
 	int i = 0;
-	while ( token != NULL ) {
+	while ( token != NULL ) { /* tills det inte finns nagon delstrang kvar */
 		args[i++] = token;
-		token = strtok( NULL, delimiter );
+		token = strtok( NULL, delimiter ); /* hamta nasta delstrang */
 	}
 
 	argc = i;
 	background = false;
+
+	/* satt background till true om sista argumentet ar '&' */
 	if ( argc > 0 && strcmp( args[i-1], "&" ) == 0 ) {
-		argc = i - 1;
-		args[i-1] = '\0';
+		argc = i - 1; /* rakna antalet argument som ett mindre */
+		args[i-1] = '\0'; /* ta bort det sista argumentet, dvs '&' */
 		background = true;
 	}
 		
@@ -151,9 +158,9 @@ void parse_command() {
 
 void print_finished_message() {
 	if ( !background ) {
-		gettimeofday(&end, NULL);
-		long runtime = (long) (end.tv_sec - start.tv_sec) * 1000;
-		runtime += (long) (end.tv_usec - start.tv_usec) / 1000;
+		gettimeofday(&end, NULL); /* hamta nuvarande tid */
+		long runtime = (long) (end.tv_sec - start.tv_sec) * 1000; /* runtime ar endtid minus starttid, for bade sekunddelen */
+		runtime += (long) (end.tv_usec - start.tv_usec) / 1000; /* och mikrosekunddelen */
 		printf("Done: foreground process %d (%s) has finished and ran for %ldms\n", child_pid, args[0], runtime);
 	}
 }
@@ -161,9 +168,10 @@ void print_finished_message() {
 void check_bg_processes() {
 	int status;
 	pid_t pid;
-	while ( true ) {
+
+	while ( true ) { /* loopa forever */
 		pid = waitpid(-1, &status, WNOHANG);
-		if (pid == 0 || pid == -1)
+		if (pid == 0 || pid == -1) /* detta betyder att det inte faenns nagon process kvar att titta pa */
 			break;
 
 		printf("Done: background process %d has finished\n", pid);
