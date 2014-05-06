@@ -47,8 +47,6 @@ int main(int argcount, char **argv, char **envp)
 
 		gettimeofday(&start, NULL); /* spara starttiden sa att vi kan mata exekveringstiden */
 
-
-
 		if ( strcmp(args[0], "exit") == 0 ) { /* om kommandot ar exit, exita */
 			exit(0);
 
@@ -105,9 +103,7 @@ int main(int argcount, char **argv, char **envp)
 			}
 		}
 
-		/* kolla om nagon bakgrundsprocess avslutats sedan senaste kommandot */
-		check_bg_processes();
-
+		check_bg_processes(); /* kolla om nagon bakgrundsprocess avslutats sedan senaste kommandot */
 	}
 }
 
