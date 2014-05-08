@@ -38,10 +38,10 @@ int main(int argcount, char **argv, char **envp)
 
  	/* Loopa forever */
 	while ( true ) {
-		clear_last_command();
-		print_command_prompt();
-		read_command();
-		parse_command();
+		clear_last_command(); /* se till att inget skrap ligger kvar fran forra kommandot */
+		print_command_prompt(); /* skriv ut nuvarande katalog som prompt */
+		read_command(); /* las anvandarens input */
+		parse_command(); /* dela upp inputraden i delar och processa */
 		if ( argc == 0 )
 			continue;
 
@@ -89,7 +89,7 @@ int main(int argcount, char **argv, char **envp)
 					/* gor inget om den inte finns */
 				}
 				if (WIFEXITED(status)) { /* barnprocessen avslutades */
-					int child_status = WEXITSTATUS(status); /* Check which signal child process exited with */
+					int child_status = WEXITSTATUS(status); /* kolla vilken signal barnprocessen avslutades med */
 					if (child_status != 0) { /* barnprocessen har avslutat med felmeddelande */
 						fprintf(stderr, "Child process (%s) failed with exit code %d\n", args[0], child_status);
 					} else {
@@ -121,7 +121,7 @@ void clear_last_command() {
 
 void print_command_prompt() {
 	char current_dir[1024];
-   	getcwd( current_dir, sizeof(current_dir) );
+   	getcwd( current_dir, sizeof(current_dir) ); /* hamta nuvarande katalog */
 	printf( "minishell:%s$ ", current_dir );
 }
 
@@ -167,7 +167,7 @@ void check_bg_processes() {
 
 	while ( true ) { /* loopa forever */
 		pid = waitpid(-1, &status, WNOHANG);
-		if (pid == 0 || pid == -1) /* detta betyder att det inte faenns nagon process kvar att titta pa */
+		if (pid == 0 || pid == -1) /* detta betyder att det inte fanns nagon process kvar att titta pa */
 			break;
 
 		printf("Done: background process %d has finished\n", pid);
