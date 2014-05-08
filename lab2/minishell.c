@@ -100,7 +100,7 @@ int main(int argcount, char **argv, char **envp)
 					fprintf(stderr, "Child process (%s) terminated by signal %d\n", args[0], child_status);
 					print_finished_message();
 				}
-				waitpid(child_pid, &status, 0); /* se till att barnet inte förblir zombie */
+				waitpid(child_pid, &status, 0); /* se till att barnet inte förblir zombie om den har avbrutits */
 
 			}
 		}
