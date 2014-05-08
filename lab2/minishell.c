@@ -98,9 +98,9 @@ int main(int argcount, char **argv, char **envp)
 				} else if (WIFSIGNALED(status)) { /* barnprocessen har avslutats av en signal */
 					int child_status = WTERMSIG(status);
 					fprintf(stderr, "Child process (%s) terminated by signal %d\n", args[0], child_status);
-					waitpid(child_pid, &status, 0); /* se till att barnet inte förblir zombie */
 					print_finished_message();
 				}
+				waitpid(child_pid, &status, 0); /* se till att barnet inte förblir zombie */
 
 			}
 		}
