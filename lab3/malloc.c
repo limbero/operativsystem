@@ -151,9 +151,9 @@ void * malloc(size_t nbytes) {
                 if((p = morecore(nunits)) == NULL)
                     return NULL;                                /* none left */
         }
-        if (biggestp->s.size == nunits) {                      /* exactly */
+        if (biggestp->s.size == nunits) {                       /* exactly */
             prebiggestp->s.ptr = biggestp->s.ptr;
-        } else {                                        /* allocate tail end */
+        } else {                                                /* allocate tail end */
             biggestp->s.size -= nunits;
             biggestp += biggestp->s.size;
             biggestp->s.size = nunits;
