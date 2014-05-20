@@ -133,6 +133,33 @@ void * malloc(size_t nbytes) {
         }
     }
     else if(STRATEGY == 3) {                                    /* worst fit */
+        Header *prebiggestp, *biggestp;
+        int first;
+        first = 1;
+
+        for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr) {
+            if(p->s.size >= nunits) {
+                if(first) {
+                    prebiggestp = prevp;
+                    biggestp = p;
+                    first = 0;
+                }
+                else if(p->s.size > biggestp->s.size)
+                    biggestp = p;
+            }
+            if(p == freep && first)                             /* wrapped around free list without finding any space large enough */
+                if((p = morecore(nunits)) == NULL)
+                    return NULL;                                /* none left */
+        }
+        if (biggestp->s.size == nunits) {                      /* exactly */
+            prebiggestp->s.ptr = biggestp->s.ptr;
+        } else {                                        /* allocate tail end */
+            biggestp->s.size -= nunits;
+            biggestp += biggestp->s.size;
+            biggestp->s.size = nunits;
+        }
+        freep = prebiggestp;
+        return (void *)(biggestp+1);
     }
     else {                                                      /* there are no other strategies */
         return NULL;
