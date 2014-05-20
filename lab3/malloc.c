@@ -109,28 +109,42 @@ void * malloc(size_t nbytes) {
         base.s.ptr = freep = prevp = &base;
         base.s.size = 0;
     }
-    for(p= prevp->s.ptr;  ; prevp = p, p = p->s.ptr) {
-        if(p->s.size >= nunits) {                           /* big enough */
-            if (p->s.size == nunits) {                      /* exactly */
-                prevp->s.ptr = p->s.ptr;
-            } else {                                        /* allocate tail end */
-                p->s.size -= nunits;
-                p += p->s.size;
-                p->s.size = nunits;
+
+    #ifndef STRATEGY
+    #define STRATEGY 1
+    #endif
+
+    if(STRATEGY == 1) {                                         /* first fit */
+        for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr) {
+            if(p->s.size >= nunits) {                           /* big enough */
+                if (p->s.size == nunits) {                      /* exactly */
+                    prevp->s.ptr = p->s.ptr;
+                } else {                                        /* allocate tail end */
+                    p->s.size -= nunits;
+                    p += p->s.size;
+                    p->s.size = nunits;
+                }
+                freep = prevp;
+                return (void *)(p+1);
             }
-            freep = prevp;
-            return (void *)(p+1);
+            if(p == freep)                                      /* wrapped around free list */
+                if((p = morecore(nunits)) == NULL)
+                    return NULL;                                /* none left */
         }
-        if(p == freep)                                      /* wrapped around free list */
-            if((p = morecore(nunits)) == NULL)
-                return NULL;                                /* none left */
+    }
+    else if(STRATEGY == 3) {                                    /* worst fit */
+    }
+    else {                                                      /* there are no other strategies */
+        return NULL;
     }
 }
 
 void *realloc(void *ptr, size_t nbytes) {
     void *new_ptr = malloc(nbytes);                                 /* allocate new memory  */
+
     if (ptr == NULL || new_ptr == NULL)
         return new_ptr;
+
     Header *header_ptr = (Header *) ptr - 1;                        /* get header of old pointer */
     size_t old_size = header_ptr->s.size * sizeof(header_ptr);      /* get size of old memory block */
     size_t copy_size = nbytes > old_size ? old_size : nbytes;       /* get min of new and old block */
