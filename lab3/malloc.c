@@ -57,8 +57,9 @@ void free(void * ap) {
 static void * __endHeap = 0;
 
 void * endHeap(void) {
-    if(__endHeap == 0) __endHeap = sbrk(0);
-        return __endHeap;
+    if(__endHeap == 0)
+        __endHeap = sbrk(0);
+    return __endHeap;
 }
 #endif
 
