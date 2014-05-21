@@ -96,7 +96,7 @@ static Header *morecore(unsigned nu) {
 }
 
 void * malloc(size_t nbytes) {
-    Header *p, *prevp;
+    Header *p, *prevp, *chosenp = NULL, *prechosenp;
     Header * morecore(unsigned);
     unsigned nunits;
 
@@ -114,56 +114,45 @@ void * malloc(size_t nbytes) {
     #define STRATEGY 1
     #endif
 
-    if(STRATEGY == 1) {                                         /* first fit */
-        for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr) {
-            if(p->s.size >= nunits) {                           /* big enough */
-                if (p->s.size == nunits) {                      /* exactly */
-                    prevp->s.ptr = p->s.ptr;
-                } else {                                        /* allocate tail end */
-                    p->s.size -= nunits;
-                    p += p->s.size;
-                    p->s.size = nunits;
-                }
-                freep = prevp;
-                return (void *)(p+1);
-            }
-            if(p == freep)                                      /* wrapped around free list */
-                if((p = morecore(nunits)) == NULL)
-                    return NULL;                                /* none left */
-        }
-    }
-    else if(STRATEGY == 3) {                                    /* worst fit */
-        Header *prebiggestp, *biggestp;
-        int first;
-        first = 1;
-
-        for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr) {
-            if(p->s.size >= nunits) {
-                if(first) {
-                    prebiggestp = prevp;
-                    biggestp = p;
-                    first = 0;
-                }
-                else if(p->s.size > biggestp->s.size)
-                    biggestp = p;
-            }
-            if(p == freep && first)                             /* wrapped around free list without finding any space large enough */
-                if((p = morecore(nunits)) == NULL)
-                    return NULL;                                /* none left */
-        }
-        if (biggestp->s.size == nunits) {                       /* exactly */
-            prebiggestp->s.ptr = biggestp->s.ptr;
-        } else {                                                /* allocate tail end */
-            biggestp->s.size -= nunits;
-            biggestp += biggestp->s.size;
-            biggestp->s.size = nunits;
-        }
-        freep = prebiggestp;
-        return (void *)(biggestp+1);
-    }
-    else {                                                      /* there are no other strategies */
+    if ( !(STRATEGY == 1 || STRATEGY == 3) )                /* we only support first fit and worst fit */
         return NULL;
+
+    int found = 0;
+
+    for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr) {      /* go through all empty areas */
+        if(p->s.size >= nunits) {                           /* big enough */
+            if (STRATEGY == 1) {                            /* first fit */
+                chosenp = p;                                /* choose first empty area that is big enough */
+                prechosenp = prevp;                         /* remember the area preceding the chosen */
+                break;
+            } else if (STRATEGY == 3) {                     /* worst fit */
+                if (!found || p->s.size > chosenp->s.size) {/* if this is the first found empty area, or it is larger than the previously largest */
+                    chosenp = p;                            /* choose this area */
+                    prechosenp = prevp;                     /* remember the area preceding the chosen */
+                }
+                found = 1;                                  /* make a note that a big enough area has been found */
+            }
+        }
+        if(p == freep) {                                    /* wrapped around free list */
+            if (STRATEGY == 3 && found)                     /* checked all empty areas and found at least one large enough */
+                break;
+            if((p = morecore(nunits)) == NULL)              /* wrapped around free list without finding a big enough empty area, so ask for more */
+                return NULL;                                /* no memory left */
+        }                                      
     }
+    if (chosenp == NULL)                                    /* Did not find empty area */
+        return NULL;
+    if (chosenp->s.size == nunits) {                        /* chosen area is exactly the correct size */
+        prechosenp->s.ptr = chosenp->s.ptr;                 /* reroute the next-pointer of the previous area to the next area */
+    } else {                                                /* allocate tail end */
+        chosenp->s.size -= nunits;                          /* make empty area smaller */
+        chosenp += chosenp->s.size;                         /* move to location where memory is to be allocated */
+        chosenp->s.size = nunits;                           /* set size of allocated memory header */
+    }
+    freep = prechosenp;                                     /* update list pointer */
+    return (void *)(chosenp+1);                             /* return the address of chosen memory area */
+
+    
 }
 
 void *realloc(void *ptr, size_t nbytes) {
