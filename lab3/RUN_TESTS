@@ -22,6 +22,9 @@ read ans
 echo -n "********************* TEST REALLOC ... "
 read ans
 ./t5
+echo -n "********************* OWN TESTS ... "
+read ans
+./tester
 #echo -n "********************* TEST CRASH  SIMPLE ... "
 #read ans
 #./t6

@@ -98,7 +98,7 @@ static Header *morecore(unsigned nu) {
 }
 
 void * malloc(size_t nbytes) {
-    Header *p, *prevp, *chosenp = NULL, *prechosenp;
+    Header *p, *prevp, *chosenp = NULL, *prechosenp = NULL;
     Header * morecore(unsigned);
     unsigned nunits;
 
