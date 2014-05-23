@@ -1,4 +1,4 @@
-#if STRATEGY != 0 /* Don't use this code if STRATEGY = 0 (stdlib-malloc)
+#if STRATEGY != 0 /* Don't use this code if STRATEGY = 0 (stdlib-malloc) */
 
 /*
 Implementations of malloc, realloc and free.

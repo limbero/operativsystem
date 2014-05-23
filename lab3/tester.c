@@ -12,6 +12,7 @@
 #define BESTSIZE 511
 #define ITERS 4096
 
+/* define different test cases */
 #define SMALL 's'
 #define LARGE 'l'
 #define RANDOM 'r'
@@ -34,7 +35,7 @@ typedef union header Header;
 
 int main(int argc, char *argv[])
 {
-    struct timeval starttime, endtime; /* start- och end-tid for processer */
+    struct timeval starttime, endtime; /* start- and end-time  */
     gettimeofday(&starttime, NULL);
 
     char type = RANDOM;
@@ -51,13 +52,13 @@ int main(int argc, char *argv[])
 #endif
 
     Header *pointers[ITERS];
-    int mem_size = MINSIZE;
+    int mem_size = MINSIZE; /* start on MINSIZE */
     switch (type) {
     case INCREASING:
-        mem_size = MINSIZE;
+        mem_size = MINSIZE; /* start on MINSIZE */
         break;
     case DECREASING:
-        mem_size = MAXSIZE;
+        mem_size = MAXSIZE; /* start on MAXSIZE */
         break;
     default:
         break;
@@ -67,49 +68,50 @@ int main(int argc, char *argv[])
     for (i = 0; i < ITERS; i++) {
         switch (type) {
         case SMALL:
-            mem_size = MINSIZE;
+            mem_size = MINSIZE; /* always MINSIZE */
             break;
         case LARGE:
-            mem_size = MAXSIZE;
+            mem_size = MAXSIZE; /* always MAXSIZE */
             break;
         case RANDOM:
-            mem_size = rand() % MAXSIZE;
+            mem_size = rand() % MAXSIZE; /* Random size between 0 and MAXSIZE */
             break;
         case INCREASING:
-            if (mem_size < MAXSIZE)
+            if (mem_size < MAXSIZE) /* Increase by 1 every round */
                 mem_size++;
             break;
         case DECREASING:
             if (mem_size > MINSIZE)
-                mem_size--;
+                mem_size--; /* decrease by 1 every round */
             break;
         case BEST:
-            mem_size = BESTSIZE;
+            mem_size = BESTSIZE; /* always same size */
             break;
         case WORST:
-            mem_size = WORSTSIZE;
+            mem_size = WORSTSIZE; /* always same size */
             break;
         default:
             break;
         }
-        int size = mem_size*sizeof(Header);
+        int size = mem_size*sizeof(Header); /* allocate x number of Headers */
         pointers[i] = (Header *) malloc(size);
-        allocated_memory += size;
+        allocated_memory += size; /* count how much memory has been allocated */
     }
 
+/* check used memory */
 #if STRATEGY != 0
     end = endHeap();
 #else
     end = (void *) sbrk(0);
 #endif
 
-    for (i = 0; i < ITERS; i++) {
+    for (i = 0; i < ITERS; i++) { /* free the memory again */
         free(pointers[i]);
     }
 
-    gettimeofday(&endtime, NULL); /* hamta nuvarande tid */
-    long runtime = (long) (endtime.tv_sec - starttime.tv_sec) * 1000; /* runtime ar endtid minus starttid, for bade sekunddelen */
-    runtime += (long) (endtime.tv_usec - starttime.tv_usec) / 1000; /* och mikrosekunddelen */
+    gettimeofday(&endtime, NULL); /* get current time */
+    long runtime = (long) (endtime.tv_sec - starttime.tv_sec) * 1000; /* runtime is endtime - starttime */
+    runtime += (long) (endtime.tv_usec - starttime.tv_usec) / 1000; /* microsecond */
     printf("Time: %ldms\n", runtime);
 
     unsigned long used_memory = (unsigned long) (end - start);
