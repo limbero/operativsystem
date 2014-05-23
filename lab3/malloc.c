@@ -1,3 +1,5 @@
+#if STRATEGY != 0
+
 #include "brk.h"
 #include <unistd.h>
 #include <string.h> 
@@ -47,8 +49,6 @@ void free(void * ap) {
     } else {
         p->s.ptr = bp;
     }
-
-    freep = p;
 }
 
 /* morecore: ask system for more memory */
@@ -99,17 +99,18 @@ static Header *morecore(unsigned nu) {
 }
 
 void * malloc(size_t nbytes) {
-    Header *p, *prevp, *chosenp = NULL, *prechosenp = NULL;
+    Header *p, *prevp;                                      /* p and prevp are for stepping through the list*/
+    Header *chosenp = NULL, *prechosenp = NULL;             /* chosenp and prechosenp are for marking the chosen pointer */
     Header * morecore(unsigned);
     unsigned nunits;
 
-    if(nbytes == 0)
+    if(nbytes == 0)                                         /* Nothing to allocate, return null */
         return NULL;
 
-    nunits = (nbytes+sizeof(Header)-1)/sizeof(Header) +1;
+    nunits = (nbytes+sizeof(Header)-1)/sizeof(Header) +1;   /* Calculate how many header units to allocate */
 
-    if((prevp = freep) == NULL) {
-        base.s.ptr = freep = prevp = &base;
+    if((prevp = freep) == NULL) {                           /* start looking at beginning of list */
+        base.s.ptr = freep = prevp = &base;                 /* choose list-start as base */
         base.s.size = 0;
     }
 
@@ -152,7 +153,6 @@ void * malloc(size_t nbytes) {
         chosenp += chosenp->s.size;                         /* move to location where memory is to be allocated */
         chosenp->s.size = nunits;                           /* set size of allocated memory header */
     }
-    freep = prechosenp;                                     /* update list pointer */
     return (void *)(chosenp+1);                             /* return the address of chosen memory area */
 
     
@@ -161,7 +161,7 @@ void * malloc(size_t nbytes) {
 void *realloc(void *ptr, size_t nbytes) {
     void *new_ptr = malloc(nbytes);                                 /* allocate new memory  */
 
-    if (ptr == NULL || new_ptr == NULL)
+    if (ptr == NULL || new_ptr == NULL)                             /* If trying to realloc a null pointer just return the new pointer. If allocation failed, return null */
         return new_ptr;
 
     Header *header_ptr = (Header *) ptr - 1;                        /* get header of old pointer */
@@ -172,3 +172,4 @@ void *realloc(void *ptr, size_t nbytes) {
     return new_ptr;
 }
 
+#endif
