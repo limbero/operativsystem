@@ -1,4 +1,14 @@
-#if STRATEGY != 0
+#if STRATEGY != 0 /* Don't use this code if STRATEGY = 0 (stdlib-malloc)
+
+/*
+Implementations of malloc, realloc and free.
+There are two different strategies used in malloc,
+namely first-fit and worst-fit. Which one is used
+is determined at compilation time, by specifying 
+the flag STRATEGY. 
+STRATEGY = 1 uses first-fit
+STRATEGY = 3 uses worst-fit
+*/
 
 #include "brk.h"
 #include <unistd.h>
@@ -115,7 +125,7 @@ void * malloc(size_t nbytes) {
     }
 
     #ifndef STRATEGY
-    #define STRATEGY 1
+    #define STRATEGY 1                                      /* Use first-fit as default */
     #endif
 
     if ( !(STRATEGY == 1 || STRATEGY == 3) )                /* we only support first fit and worst fit */
